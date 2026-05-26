@@ -87,9 +87,24 @@ def generar_datos_escenario(escenario_id, N=500, random_state=None):
             1: [[2.0, -1.5], [-1.5, 2.0]],
             2: [[3.0, 0.0], [0.0, 0.5]]
         }
+
+    elif escenario_id == 5:
+        # ESCENARIO 4: Geometría Anisotrópica + Superposición Poblacional extrema
+        # - Medias: Acercadas drásticamente para forzar el solapamiento.
+        # - Covarianzas: Las mismas elipses del escenario 3.
+        mu = {
+            0: [0, 0], 
+            1: [1, 1], # Acercamos el centroide 1 al origen
+            2: [3, 0]  # Acercamos el centroide 2 al origen
+        }
+        cov = {
+            0: [[2.0, 1.5], [1.5, 2.0]],
+            1: [[2.0, -1.5], [-1.5, 2.0]],
+            2: [[3.0, 0.0], [0.0, 0.5]]
+        }
         
     else:
-        raise ValueError(f"Error: El escenario {escenario_id} no está definido. Elija del 1 al 4.")
+        raise ValueError(f"Error: El escenario {escenario_id} no está definido. Elija del 1 al 5.")
 
     # 3. Generación de las coordenadas espaciales
     # Muestreamos iterativamente de la distribución Gaussiana multivariada 
