@@ -1,0 +1,41 @@
+# =========================
+# Entornos Virtuales
+# =========================
+env/
+venv/
+.env
+
+# =========================
+# Archivos compilados de Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+
+# =========================
+# Archivos de SO y Editores
+# =========================
+.vscode/
+.DS_Store
+Thumbs.db
+
+# =========================
+# Distribución / Empaquetado
+# =========================
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
