@@ -78,9 +78,9 @@ def generar_datos_escenario(escenario_id, N=500, random_state=None):
         # - Medias: Acercadas drásticamente para forzar el solapamiento.
         # - Covarianzas: Las mismas elipses del escenario 3.
         mu = {
-            0: [0, 0], 
+            0: [-2, 0], 
             1: [2, 2], # Acercamos el centroide 1 al origen
-            2: [4, 0]  # Acercamos el centroide 2 al origen
+            2: [5, -1]  # Acercamos el centroide 2 al origen
         }
         cov = {
             0: [[2.0, 1.5], [1.5, 2.0]],
