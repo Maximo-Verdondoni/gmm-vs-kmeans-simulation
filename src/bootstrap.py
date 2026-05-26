@@ -18,11 +18,15 @@ def ejecutar_bootstrap(X, B_iteraciones=500):
         km = KMeans(n_clusters=3, n_init=10, random_state=b).fit(X_boot)
         gmm = GaussianMixture(n_components=3, covariance_type='full', random_state=b).fit(X_boot)
         
-        # 3. Extraer centroides 
-        # NOTA TÉCNICA: Se ordenan por el eje X para evitar el "Label Switching"
-        # y que el cluster 0 siempre sea el de la izquierda.
-        c_km = np.sort(km.cluster_centers_, axis=0) 
-        c_gmm = np.sort(gmm.means_, axis=0)
+        # 3. Extraer centroides crudos
+        c_km_raw = km.cluster_centers_
+        c_gmm_raw = gmm.means_
+        
+        # 4. Solución al Label Switching (Ordenar manteniendo el par X,Y)
+        # argosort() devuelve los índices que ordenarían la columna 0 (eje X).
+        # Luego usamos esos índices para reordenar las filas completas.
+        c_km = c_km_raw[c_km_raw[:, 0].argsort()]
+        c_gmm = c_gmm_raw[c_gmm_raw[:, 0].argsort()]
         
         centroides_km.append(c_km)
         centroides_gmm.append(c_gmm)
