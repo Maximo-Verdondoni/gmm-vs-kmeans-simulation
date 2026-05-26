@@ -99,66 +99,81 @@ def plot_bootstrap_centroids(X, centroides_km, centroides_gmm, titulo="Inestabil
     plt.tight_layout()
     plt.show()
 
-def plot_gmm_soft_boundaries(X, y_pred, probs, titulo="Fronteras Difusas y Certeza en GMM"):
+def plot_gmm_background_certainty(X, y_real, gmm, titulo="Regiones de Decisión y Certeza de Fondo en GMM"):
     """
-    Grafica los puntos coloreados por el clúster asignado por GMM, aplicando
-    una opacidad (alpha) proporcional a la certeza/probabilidad de la asignación.
+    Grafica los puntos reales de forma sólida y colorea el fondo del gráfico 
+    según el clúster dominante en cada región espacial, disipando el color 
+    (aumentando la transparencia) en las zonas de incertidumbre fronteriza.
     
     Parámetros:
     -----------
     X : np.array de forma (N, 2)
-        Coordenadas de los puntos.
-    y_pred : np.array de forma (N,)
-        Etiquetas predichas por el modelo (el clúster con mayor probabilidad).
-    probs : np.array de forma (N, K)
-        Matriz de probabilidades obtenida con gmm.predict_proba(X).
+        Coordenadas de los puntos del dataset.
+    y_real : np.array de forma (N,)
+        Etiquetas reales o predichas para los puntos (para colorear los puntos sólidos).
+    gmm : GaussianMixture
+        El modelo GMM ya entrenado (.fit() ejecutado previamente).
+    titulo : str
+        Título del gráfico.
     """
-    plt.figure(figsize=(9, 7))
+    plt.figure(figsize=(10, 8))
     
-    # 1. Extraer la probabilidad del clúster asignado para cada punto (la certeza)
-    certeza = np.max(probs, axis=1)
+    # 1. Definir los límites del gráfico basados en tus datos reales
+    x_min, x_max = X[:, 0].min() - 1.5, X[:, 0].max() + 1.5
+    y_min, y_max = X[:, 1].min() - 1.5, X[:, 1].max() + 1.5
     
-    # 2. Normalizar la certeza para el canal alfa (opacidad)
-    # Si K=3, la probabilidad mínima de ganar es 1/3 (0.33). 
-    # Al normalizar de 0 a 1, exageramos visualmente la pérdida de certeza en las fronteras.
-    K = probs.shape[1]
+    # 2. Crear la malla (Meshgrid) para evaluar el espacio de fondo
+    # 300x300 puntos es un excelente balance entre resolución visual y velocidad computacional
+    xx, yy = np.meshgrid(np.linspace(x_min, x_max, 300),
+                         np.linspace(y_min, y_max, 300))
+    
+    # Aplanar la malla para pasársela al GMM como un vector de coordenadas (N_malla, 2)
+    grid_points = np.c_[xx.ravel(), yy.ravel()]
+    
+    # 3. Obtener las probabilidades blandas de la grilla de fondo
+    grid_probs = gmm.predict_proba(grid_points)
+    grid_pred = np.argmax(grid_probs, axis=1) # Clúster ganador en cada pixel
+    grid_certeza = np.max(grid_probs, axis=1) # Nivel de certeza [0.33 a 1.0]
+    
+    # 4. Normalizar la certeza de fondo para el canal Alpha
+    K = gmm.n_components
     prob_min = 1.0 / K
-    # Evitamos división por cero si la certeza fuera menor al mínimo teórico
-    alpha_scaled = (certeza - prob_min) / (1.0 - prob_min)
-    alpha_scaled = np.clip(alpha_scaled, 0.05, 1.0) # Asegurar rango [0.05, 1.0] para que no desaparezcan del todo
+    alpha_background = (grid_certeza - prob_min) / (1.0 - prob_min)
+    alpha_background = np.clip(alpha_background, 0.0, 1.0) # Forzar rango estricto [0, 1]
     
-    # 3. Mapear colores de seaborn manualmente para poder aplicar alphas individuales
-    unique_labels = np.unique(y_pred)
-    base_palette = sns.color_palette("deep", len(unique_labels))
+    # 5. Mapear colores de fondo (Matriz RGBA de píxeles)
+    unique_labels = np.arange(K)
+    base_palette = sns.color_palette("deep", K)
     
-    # 4. Graficar punto por punto (o en bucle por nivel de opacidad) para aplicar alphas individuales
-    # Usamos un truco eficiente con matplotlib: pasar un array de colores RGBA
-    rgba_colors = np.zeros((X.shape[0], 4))
-    for i, label in enumerate(y_pred):
-        # Color base asignado al clúster (R, G, B)
-        rgba_colors[i, :3] = base_palette[label]
-        # Opacidad según su certeza calculada (A)
-        rgba_colors[i, 3] = alpha_scaled[i]
+    rgba_background = np.zeros((grid_points.shape[0], 4))
+    for i, label in enumerate(grid_pred):
+        rgba_background[i, :3] = base_palette[label]     # Color del clúster dominante
+        rgba_background[i, 3] = alpha_background[i] * 0.4 # Multiplicamos por 0.4 para que sea un fondo sutil y no tape los puntos
         
-    # Graficar usando la matriz RGBA personalizada
-    scatter = plt.scatter(x=X[:, 0], y=X[:, 1], c=rgba_colors, s=50, edgecolor="none")
+    # Reestructurar la matriz plana RGBA a las dimensiones de la imagen (300, 300, 4)
+    rgba_image = rgba_background.reshape(xx.shape + (4,))
     
-    # 5. Estética y detalles del reporte
+    # 6. Pintar el fondo usando imshow
+    plt.imshow(rgba_image, extent=(x_min, x_max, y_min, y_max), origin='lower', aspect='auto')
+    
+    # 7. Graficar los puntos reales ARRIBA del fondo (completamente sólidos y delineados)
+    # Usamos la misma paleta para mantener la correlación
+    scatter = sns.scatterplot(
+        x=X[:, 0], y=X[:, 1], hue=y_real, 
+        palette="deep", s=55, alpha=1.0, edgecolor="black", linewidth=0.8
+    )
+    
+    # 8. Estética final y Leyendas
     plt.title(titulo, fontsize=14, pad=15, fontweight='bold')
     plt.xlabel("X1")
     plt.ylabel("X2")
+    plt.xlim(x_min, x_max)
+    plt.ylim(y_min, y_max)
     
-    # Crear una leyenda manual elegante para los clústeres
-    from matplotlib.patches import Patch
-    legend_elements = [Patch(facecolor=base_palette[k], edgecolor='none', label=f'Clúster {k}') 
+    # Leyenda manual para evitar duplicados feos en matplotlib
+    legend_elements = [Patch(facecolor=base_palette[k], edgecolor='k', label=f'Clúster {k}') 
                        for k in unique_labels]
-    plt.legend(handles=legend_elements, title="Clúster Asignado", loc="upper right")
-    
-    # Añadir barra de color lateral que indique qué significa la opacidad
-    sm = plt.cm.ScalarMappable(cmap=plt.cm.Greys, norm=plt.Normalize(vmin=prob_min, vmax=1.0))
-    sm.set_array([])
-    cbar = plt.colorbar(sm, ax=plt.gca(), fraction=0.046, pad=0.04)
-    cbar.set_label('Nivel de Certeza P(Clúster | X)', fontsize=11, labelpad=10)
+    plt.legend(handles=legend_elements, title="Regiones de Clúster", loc="upper right")
     
     plt.tight_layout()
     plt.show()
@@ -166,18 +181,14 @@ def plot_gmm_soft_boundaries(X, y_pred, probs, titulo="Fronteras Difusas y Certe
 # Ejemplo de como ejecutarlo en un notebook:
     # from sklearn.mixture import GaussianMixture
 
-    # # 1. Ajustar el modelo GMM
-    # gmm = GaussianMixture(n_components=3, covariance_type='full', random_state=42)
-    # gmm.fit(X)
+    # # 1. Entrenas tu GMM con el set de datos del escenario actual
+    # gmm_modelo = GaussianMixture(n_components=3, covariance_type='full', random_state=42)
+    # gmm_modelo.fit(X)
 
-    # # 2. Predecir etiquetas duras y obtener probabilidades blandas
-    # y_pred_gmm = gmm.predict(X)
-    # probs_gmm = gmm.predict_proba(X) # <--- AQUÍ está el secreto
-
-    # # 3. Invocar tu nueva función visual profesional
-    # plot_gmm_soft_boundaries(
+    # # 2. Invocas la nueva función de fondo disipado
+    # plot_gmm_background_certainty(
     #     X=X, 
-    #     y_pred=y_pred_gmm, 
-    #     probs=probs_gmm, 
-    #     titulo="Escenario 4: Degradación de Certeza en Zonas de Superposición Difusa"
+    #     y_real=y,  # Tu columna de "verdad absoluta" generada originalmente
+    #     gmm=gmm_modelo, 
+    #     titulo="Escenario 4: Análisis Espacial de Fronteras con Fondo de Incertidumbre"
     # )
