@@ -109,8 +109,14 @@ def generar_datos_escenario(escenario_id, N=500, random_state=None):
     # 3. Generación de las coordenadas espaciales
     # Muestreamos iterativamente de la distribución Gaussiana multivariada 
     # correspondiente al clúster asignado previamente.
-    for i in range(N):
-        k = y[i]
-        X[i] = np.random.multivariate_normal(mean=mu[k], cov=cov[k])
+    for k in range(3):
+        mask = (y == k)
+        n_k = mask.sum()
+        if n_k > 0:
+            X[mask] = np.random.multivariate_normal(
+                mean=mu[k], 
+                cov=cov[k], 
+                size=n_k
+            )
         
     return X, y
