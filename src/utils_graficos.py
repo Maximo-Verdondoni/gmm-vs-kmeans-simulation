@@ -254,70 +254,84 @@ def plot_gmm_background_certainty(X, y_real, gmm, titulo="Regiones de Decisión 
     plt.tight_layout()
     plt.show()
 
-def plot_gmm_3d_mountains(X, gmm, titulo="Densidad 3D de las Componentes GMM"):
+def plot_gmm_3d_mountains(X, gmm, titulo="Densidad 3D y Ejes de Componentes Principales"):
     """
     Grafica la Función de Densidad de Probabilidad (PDF) de cada clúster 
-    como una superficie 3D ("montañas"), respetando los colores originales.
+    como una superficie 3D, y proyecta en la base (Z=0) las medias (mu) 
+    junto con los vectores de varianza.
     """
-    fig = plt.figure(figsize=(12, 8))
-    # Declaramos que el eje será tridimensional
+    fig = plt.figure(figsize=(12, 9))
     ax = fig.add_subplot(111, projection='3d')
     
     # 1. Definir los límites y construir la malla 2D
     x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
     y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
     
-    # mgrid es muy eficiente para generar coordenadas espaciales
     x, y = np.mgrid[x_min:x_max:.05, y_min:y_max:.05]
     pos = np.empty(x.shape + (2,))
     pos[:, :, 0] = x
     pos[:, :, 1] = y
     
     K = gmm.n_components
+    import seaborn as sns
     base_palette = sns.color_palette("deep", K)
     
-    # Guardamos el valor máximo de Z para ajustar el techo del gráfico luego
     max_z = 0 
     
-    # 2. Iterar sobre cada clúster para dibujar su montaña
+    # 2. Iterar sobre cada clúster
     for k in range(K):
-        # Extraemos los parámetros matemáticos del clúster k
         mu = gmm.means_[k]
         cov = gmm.covariances_[k]
         weight = gmm.weights_[k]
         
-        # Instanciamos la distribución normal multivariada
+        # Calcular PDF
         rv = multivariate_normal(mu, cov)
-        
-        # Calculamos la altura (Z) multiplicando la PDF por el peso del clúster en la mezcla
         z = weight * rv.pdf(pos)
+        
         if z.max() > max_z:
             max_z = z.max()
             
-        # 3. Estética: Crear un degradado desde transparente (base) hasta el color del clúster (cima)
+        # =========================================================
+        # 3. LA SOLUCIÓN AL PLANO VERDE (Máscara NaN)
+        # =========================================================
+        z_surface = z.copy()
+        # Todo valor que sea "piso" (densidad casi nula) lo volvemos NaN 
+        # para que el motor 3D de Matplotlib sea incapaz de dibujarlo.
+        z_surface[z_surface < 1e-4] = np.nan 
+        
         color_rgb = base_palette[k]
-        # RGBA: (R, G, B, Alpha)
-        colors = [(color_rgb[0], color_rgb[1], color_rgb[2], 0.0),  # Base transparente
-                  (color_rgb[0], color_rgb[1], color_rgb[2], 0.9)]  # Cima sólida
+        colors = [(color_rgb[0], color_rgb[1], color_rgb[2], 0.2), # Un poco más transparente en la base
+                  (color_rgb[0], color_rgb[1], color_rgb[2], 0.9)]
         cmap_custom = LinearSegmentedColormap.from_list(f'custom_cmap_{k}', colors)
         
-        # Graficamos la superficie 3D
-        ax.plot_surface(x, y, z, cmap=cmap_custom, linewidth=0, antialiased=True)
+        # OJO: Quitamos el alpha=0.8 de acá para que el colormap haga su trabajo
+        ax.plot_surface(x, y, z_surface, cmap=cmap_custom, linewidth=0, antialiased=True)
         
-        # Graficamos las curvas de nivel en el piso (z=0)
-        ax.contour(x, y, z, zdir='z', offset=0, colors=[color_rgb], alpha=0.6, linewidths=1.5)
+        # El contorno lo seguimos haciendo con el 'z' original porque no sufre este problema
+        ax.contour(x, y, z, zdir='z', offset=0, colors=[color_rgb], alpha=0.5, linewidths=2)
 
-    # 4. Configuración final de la vista
+        # =========================================================
+        # 4. Proyección en el piso (Z=0) de Mu y Vectores
+        # =========================================================
+        ax.scatter(mu[0], mu[1], 0, color=color_rgb, marker='X', s=120, edgecolor='black', zorder=10, linewidth=2)
+        
+        autovalores, autovectores = np.linalg.eigh(cov)
+        
+        for i in range(2):
+            vector_desviacion = autovectores[:, i] * np.sqrt(autovalores[i]) * 2.0
+            x_line = [mu[0], mu[0] + vector_desviacion[0]]
+            y_line = [mu[1], mu[1] + vector_desviacion[1]]
+            z_line = [0, 0]
+            ax.plot(x_line, y_line, z_line, color='black', linewidth=2, linestyle='-', zorder=11)
+
+    # 5. Configuración final
     ax.set_title(titulo, fontsize=14, pad=20, fontweight='bold')
     ax.set_xlabel('Eje X1', labelpad=10)
     ax.set_ylabel('Eje X2', labelpad=10)
     ax.set_zlabel('Densidad de Probabilidad $p(x)$', labelpad=10)
     
-    # Fijamos el piso en Z=0
     ax.set_zlim(0, max_z * 1.1)
-    
-    # Ajustamos el ángulo de la cámara (elevación y rotación horizontal)
-    ax.view_init(elev=25, azim=-45)
+    ax.view_init(elev=35, azim=-45)
     
     plt.tight_layout()
     plt.show()
