@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch, Ellipse
+from scipy.stats import multivariate_normal
+from matplotlib.colors import LinearSegmentedColormap
 import seaborn as sns
 import numpy as np
 
@@ -248,6 +250,74 @@ def plot_gmm_background_certainty(X, y_real, gmm, titulo="Regiones de Decisión 
     legend_elements = [Patch(facecolor=base_palette[k], edgecolor='k', label=f'Clúster {k}') 
                        for k in unique_labels]
     plt.legend(handles=legend_elements, title="Regiones de Clúster", loc="upper right")
+    
+    plt.tight_layout()
+    plt.show()
+
+def plot_gmm_3d_mountains(X, gmm, titulo="Densidad 3D de las Componentes GMM"):
+    """
+    Grafica la Función de Densidad de Probabilidad (PDF) de cada clúster 
+    como una superficie 3D ("montañas"), respetando los colores originales.
+    """
+    fig = plt.figure(figsize=(12, 8))
+    # Declaramos que el eje será tridimensional
+    ax = fig.add_subplot(111, projection='3d')
+    
+    # 1. Definir los límites y construir la malla 2D
+    x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+    y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+    
+    # mgrid es muy eficiente para generar coordenadas espaciales
+    x, y = np.mgrid[x_min:x_max:.05, y_min:y_max:.05]
+    pos = np.empty(x.shape + (2,))
+    pos[:, :, 0] = x
+    pos[:, :, 1] = y
+    
+    K = gmm.n_components
+    base_palette = sns.color_palette("deep", K)
+    
+    # Guardamos el valor máximo de Z para ajustar el techo del gráfico luego
+    max_z = 0 
+    
+    # 2. Iterar sobre cada clúster para dibujar su montaña
+    for k in range(K):
+        # Extraemos los parámetros matemáticos del clúster k
+        mu = gmm.means_[k]
+        cov = gmm.covariances_[k]
+        weight = gmm.weights_[k]
+        
+        # Instanciamos la distribución normal multivariada
+        rv = multivariate_normal(mu, cov)
+        
+        # Calculamos la altura (Z) multiplicando la PDF por el peso del clúster en la mezcla
+        z = weight * rv.pdf(pos)
+        if z.max() > max_z:
+            max_z = z.max()
+            
+        # 3. Estética: Crear un degradado desde transparente (base) hasta el color del clúster (cima)
+        color_rgb = base_palette[k]
+        # RGBA: (R, G, B, Alpha)
+        colors = [(color_rgb[0], color_rgb[1], color_rgb[2], 0.0),  # Base transparente
+                  (color_rgb[0], color_rgb[1], color_rgb[2], 0.9)]  # Cima sólida
+        cmap_custom = LinearSegmentedColormap.from_list(f'custom_cmap_{k}', colors)
+        
+        # Graficamos la superficie 3D
+        ax.plot_surface(x, y, z, cmap=cmap_custom, linewidth=0, antialiased=True)
+        
+        # Graficamos las curvas de nivel en el piso (z=0)
+        ax.contour(x, y, z, zdir='z', offset=0, colors=[color_rgb], alpha=0.6, linewidths=1.5)
+
+    # 4. Configuración final de la vista
+    ax.set_title(titulo, fontsize=14, pad=20, fontweight='bold')
+    ax.set_xlabel('Eje X1', labelpad=10)
+    ax.set_ylabel('Eje X2', labelpad=10)
+    ax.set_zlabel('Densidad de Probabilidad $p(x)$', labelpad=10)
+    
+    # Fijamos el piso en Z=0
+    ax.set_zlim(0, max_z * 1.1)
+    
+    # Ajustamos el ángulo de la cámara (elevación y rotación horizontal)
+    ax.view_init(elev=25, azim=-45)
     
     plt.tight_layout()
     plt.show()
