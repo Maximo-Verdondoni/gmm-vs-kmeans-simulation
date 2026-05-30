@@ -14,7 +14,7 @@ def ejecutar_montecarlo(M_replicas=200):
     for escenario in [1, 2, 3, 4, 5]:
         for m in range(M_replicas):
             # 1. Generar nueva muestra
-            X, y_real = generar_datos_escenario(escenario_id=escenario)
+            X, y_real = generar_datos_escenario(escenario_id=escenario, random_state=escenario * 1000 + m)
             
             # 2. Ajustar K-Means
             kmeans = KMeans(n_clusters=3, random_state=m, n_init=10)
@@ -23,7 +23,7 @@ def ejecutar_montecarlo(M_replicas=200):
             
             # 3. Ajustar GMM
             gmm = GaussianMixture(n_components=3, covariance_type='full', 
-                random_state=m, reg_covar=1e-4, max_iter=200)
+                random_state=m, reg_covar=1e-6, max_iter=200)
             y_pred_gmm = gmm.fit_predict(X)
             ari_gmm = adjusted_rand_score(y_real, y_pred_gmm)
             
