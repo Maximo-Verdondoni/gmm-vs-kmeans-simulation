@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
-from sklearn.metrics import adjusted_rand_score
+from sklearn.metrics import adjusted_rand_score, homogeneity_score, completeness_score
 from src.data_generation import generar_datos_escenario
 from sklearn.metrics import silhouette_score
 
@@ -33,14 +33,18 @@ def ejecutar_montecarlo(M_replicas=200):
                 'Replica': m,
                 'Modelo': 'K-Means',
                 'ARI': ari_km,
-                'Silhouette': silhouette_score(X, y_pred_km)
+                'Silhouette': silhouette_score(X, y_pred_km),
+                'Homogeneidad': homogeneity_score(y_real, y_pred_km),
+                'Completitud': completeness_score(y_real, y_pred_km)
             })
             resultados.append({
                 'Escenario': escenario,
                 'Replica': m,
                 'Modelo': 'GMM',
                 'ARI': ari_gmm,
-                'Silhouette': silhouette_score(X, y_pred_gmm)
+                'Silhouette': silhouette_score(X, y_pred_gmm),
+                'Homogeneidad': homogeneity_score(y_real, y_pred_gmm),
+                'Completitud': completeness_score(y_real, y_pred_gmm)
             })
             
     return pd.DataFrame(resultados)
