@@ -166,16 +166,25 @@ def plot_elipse_confianza(ax, datos_xy, color, n_std=2.0):
                      edgecolor=color, facecolor='none', linewidth=2, linestyle='--')
     ax.add_patch(elipse)
 
-def plot_bootstrap_centroids_bootstrap(X, centroides_km, centroides_gmm, titulo="Estabilidad de Centroides (Bootstrap)"):
+def plot_bootstrap_centroids_bootstrap(X, centroides_km, centroides_gmm, escenario_id, titulo="Estabilidad de Centroides (Bootstrap)"):
     """
     Grafica la dispersión de los centroides obtenidos por Bootstrap para K-Means y GMM,
-    superponiendo elipses de confianza del 95%.
+    superponiendo elipses de confianza del 95% e indicando el centroide real (μ) de fondo.
     """
-    COLORES = ['#e74c3c', '#2ecc71', '#3498db']  # uno por clúster
+    COLORES = ["#1359b6", "#db9d15", "#0e7905"]  # Uno por clúster
     fig, axes = plt.subplots(1, 2, figsize=(16, 6), sharex=True, sharey=True)
 
+    # Definimos los parámetros poblacionales reales (mu) correspondientes a cada escenario
+    mu_reales = {
+        1: {0: [0, 0], 1: [5, 5], 2: [10, 0]},
+        2: {0: [0, 0], 1: [5, 5], 2: [10, 0]},
+        3: {0: [0, 0], 1: [5, 5], 2: [10, 0]},
+        4: {0: [-2, 0], 1: [2, 2], 2: [5, -1]},
+        5: {0: [0, 0], 1: [1, 1], 2: [3, 0]}
+    }
+
     for ax, c_boot, nombre in zip(axes, [centroides_km, centroides_gmm], ['K-Means', 'GMM']):
-        # Datos de fondo
+        # Datos de fondo atenuados
         ax.scatter(X[:, 0], X[:, 1], c='lightgray', s=10, alpha=0.3, label='Datos')
         
         for k in range(3):
@@ -189,11 +198,18 @@ def plot_bootstrap_centroids_bootstrap(X, centroides_km, centroides_gmm, titulo=
             # 2. Elipse de confianza del 95% (n_std=2.0)
             plot_elipse_confianza(ax, datos_cluster, color=COLORES[k], n_std=2.0)
             
+            # Graficar el centroide real (μ)
+            mu_val = mu_reales[int(escenario_id)][k]
+            # Usamos una estrella grande destacada
+            ax.scatter(mu_val[0], mu_val[1], color='black', marker='.', s=100, 
+                       edgecolor='white', linewidth=1.2, zorder=10, 
+                       label='μ Real' if k == 0 else "") # Agrega una sola etiqueta a la leyenda
+            
             # Dummy scatter invisible solo para que la leyenda se vea limpia
             ax.scatter([], [], c=COLORES[k], label=f'Clúster {k}')
 
         ax.set_title(f"Bootstrap {nombre}", fontsize=13)
-        ax.legend(markerscale=1.5, loc='best')
+        ax.legend(markerscale=1.2, loc='best')
 
     fig.suptitle(titulo, fontsize=16, fontweight='bold')
     plt.tight_layout()
