@@ -1,93 +1,93 @@
-# 🚀 GMM vs. K-Means: Cuando la Geometría Rompe los Algoritmos
+# 🚀 GMM vs. K-Means: When Geometry Breaks Algorithms
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-Machine_Learning-orange.svg)
-![Simulación](https://img.shields.io/badge/Métodos-Montecarlo_%7C_Bootstrap-success.svg)
+![Simulation](https://img.shields.io/badge/Simulation-Monte_Carlo_%7C_Bootstrap-success.svg)
 
-K-Means es el algoritmo de clustering más utilizado en la industria por su velocidad y simplicidad, pero tiene un talón de Aquiles estructural: **asume que el mundo está hecho de esferas perfectas y simétricas**. 
+K-Means is the most widely used clustering algorithm in the industry due to its speed and simplicity, but it has a structural Achilles' heel: **it assumes the world is made of perfect, symmetric spheres**. 
 
-¿Qué pasa cuando los datos reales presentan clústeres elípticos, densidades desiguales o alta superposición? En este proyecto demostramos empíricamente por qué los algoritmos de fronteras rígidas (Hard Clustering) colapsan frente a la complejidad espacial, y cómo los **Modelos de Mezclas Gaussianas (GMM)** logran descifrar la estructura latente mediante asignación probabilística (Soft Clustering).
-
----
-
-## 🧠 Destacados del Proyecto
-
-Este repositorio no es solo una comparativa de modelos, es un entorno de experimentación estadística completo. Incluye:
-
-- ⚙️ **Mecanismo Generador de Datos (MGD):** Un motor de simulación de mixturas gaussianas en $\mathbb{R}^2$ para crear "pruebas de estrés" geométricas controladas.
-- 🎲 **Simulación de Montecarlo:** Ejecución de cientos de réplicas para evaluar la esperanza matemática de métricas extrínsecas (ARI, Homogeneidad, Completitud).
-- 🔄 **Resolución de Label Switching:** Implementación del *Algoritmo Húngaro* (asignación lineal) para solucionar la permutación aleatoria de etiquetas en la inestabilidad paramétrica.
-- 📊 **Visualizaciones Avanzadas:** Renderizado de funciones de densidad de probabilidad (PDF) en 3D con proyección de autovectores, mapeo de fronteras difusas (alpha mapping) y elipses de confianza paramétricas.
+What happens when real-world data presents elliptical clusters, unequal densities, or severe overlap? In this project, we empirically demonstrate why rigid boundary algorithms (Hard Clustering) collapse in the face of spatial complexity, and how **Gaussian Mixture Models (GMM)** manage to decode the latent structure through probabilistic assignment (Soft Clustering).
 
 ---
 
-## 📂 Arquitectura del Repositorio
+## 🧠 Project Highlights
 
-El código fuente está estructurado siguiendo buenas prácticas de MLOps, separando la lógica matemática de la visualización y el análisis.
+This repository is not just a model comparison; it is a complete statistical experimentation environment. It includes:
 
-```text
+- ⚙️ **Data Generating Mechanism (DGM):** A Gaussian mixture simulation engine in $\mathbb{R}^2$ to create controlled geometric "stress tests."
+- 🎲 **Monte Carlo Simulation:** Execution of hundreds of replicas to evaluate the expected value of extrinsic metrics (ARI, Homogeneity, Completeness).
+- 🔄 **Label Switching Resolution:** Implementation of the *Hungarian Algorithm* (linear sum assignment) to solve the random permutation of labels during parametric instability analysis.
+- 📊 **Advanced Visualizations:** 3D rendering of Probability Density Functions (PDF) with eigenvector projection, fuzzy boundary mapping (alpha mapping), and parametric confidence ellipses.
+
+---
+
+## 📂 Repository Architecture
+
+The source code is structured following MLOps best practices, cleanly separating mathematical logic from visualization and analysis.
+
+~~~text
 .
 ├── notebooks/              # Notebooks
-│   ├── Estudio.ipynb       # Notebook principal con la narrativa, análisis y conclusiones
-├── src/                    # Módulos Python reutilizables
-│   ├── data_generation.py  # Lógica del MGD y perturbación espacial
-│   ├── simulation.py       # Pipeline de Montecarlo y recolección de métricas
-│   ├── bootstrap.py        # Remuestreo no paramétrico y anclaje de centroides
-│   └── utils.py            # Caja de herramientas visuales (Seaborn / Matplotlib 3D)
+│   ├── Estudio.ipynb       # Main notebook featuring narrative, analysis, and conclusions
+├── src/                    # Reusable Python modules
+│   ├── data_generation.py  # DGM logic and spatial perturbation
+│   ├── simulation.py       # Monte Carlo pipeline and metrics collection
+│   ├── bootstrap.py        # Non-parametric resampling and centroid anchoring
+│   └── utils.py            # Visual toolkit (Seaborn / Matplotlib 3D)
 ├── requirements.txt
 └── README.md
-```
+~~~
 
 ---
 
-## 🧪 Pruebas de Estrés: Los 5 Escenarios
+## 🧪 Stress Tests: The 5 Scenarios
 
-El espacio latente fue deformado progresivamente para evaluar el límite de ruptura de ambos algoritmos:
+The latent space was progressively deformed to evaluate the breaking point of both algorithms:
 
-| # | Escenario | Geometría | El Desafío Algorítmico |
-|---|-----------|-----------|------------------------|
-| 1 | **Control** | Esferas perfectas y separadas | Línea base. Empate técnico esperado. |
-| 2 | **Heterocedasticidad** | Varianzas fuertemente desiguales | K-Means es propenso a "robar" puntos de clústeres dispersos. |
-| 3 | **Anisotropía** | Elipses con distintas orientaciones | K-Means divide las elipses a la mitad. GMM ajusta matrices de covarianza. |
-| 4 | **Superposición** | Elipses cercanas | Prueba de fuego para evaluar la incertidumbre en las fronteras. |
-| 5 | **Colapso Total** | Ruido y superposición extrema | Evaluación del *Overfitting* y varianza paramétrica. |
-
----
-
-## 📈 Hallazgos Principales (Bias-Variance Trade-off)
-
-1. **El Sesgo de K-Means:** Ante la anisotropía (Escenario 3), K-Means presenta un alto sesgo geométrico, desplazando sus centroides lejos del parámetro poblacional real ($\mu$) al forzar celdas de Voronoi donde no corresponden.
-2. **La Robustez de GMM:** GMM se mantiene insesgado frente a varianzas y covarianzas desiguales, logrando una calidad de partición (ARI) superior.
-3. **La Trampa de la Complejidad:** En escenarios de ruido puro (Escenario 5), la flexibilidad de GMM le juega en contra (alta varianza paramétrica), sobreajustándose al ruido en cada iteración de Bootstrap, mientras que K-Means mantiene estimaciones erróneas pero estables.
+| # | Scenario | Geometry | The Algorithmic Challenge |
+|---|----------|----------|---------------------------|
+| 1 | **Control** | Perfect, separated spheres | Baseline. A technical tie is expected. |
+| 2 | **Heteroscedasticity** | Strongly unequal variances | K-Means is prone to "stealing" points from highly dispersed clusters. |
+| 3 | **Anisotropy** | Ellipses with varied orientations | K-Means splits ellipses in half. GMM adjusts full covariance matrices. |
+| 4 | **Overlap** | Close, intersecting ellipses | Acid test to evaluate uncertainty across decision boundaries. |
+| 5 | **Total Collapse** | Pure noise and extreme overlap | Evaluation of *Overfitting* and parametric variance. |
 
 ---
 
-## ⚙️ Reproducción del Estudio
+## 📈 Key Findings (Bias-Variance Trade-off)
 
-Para correr las simulaciones y generar los gráficos 3D localmente, se requieren las siguientes dependencias:
+1. **The K-Means Bias:** Faced with anisotropy (Scenario 3), K-Means exhibits a high geometric bias, shifting its centroids far from the true population parameter ($\mu$) by forcing Voronoi cells where they do not belong.
+2. **GMM's Robustness:** GMM remains unbiased against unequal variances and covariances, achieving vastly superior partition quality (ARI).
+3. **The Complexity Trap:** In pure noise scenarios (Scenario 5), GMM's flexibility works against it (high parametric variance). It overfits the noise in every Bootstrap iteration, whereas K-Means maintains erroneous but stable estimations.
 
-```bash
-# Clonar el repositorio
-git clone [https://github.com/tu-usuario/gmm-vs-kmeans-simulation.git](https://github.com/tu-usuario/gmm-vs-kmeans-simulation.git)
+---
+
+## ⚙️ Reproduction Guide
+
+To run the simulations and generate the 3D graphics locally, the following dependencies are required:
+
+~~~bash
+# Clone the repository
+git clone https://github.com/tu-usuario/gmm-vs-kmeans-simulation.git
 cd gmm-vs-kmeans-simulation
 
-# Instalar dependencias
+# Install dependencies
 pip install -r requirements.txt
 
-# Iniciar el entorno interactivo
+# Launch the interactive environment
 jupyter notebook Estudio.ipynb
-```
+~~~
 
 ---
 
-## 👥 Sobre los Autores
+## 👥 About the Authors
 
-Este proyecto fue desarrollado como estudio final para la asignatura **Cálculo Numérico y Simulación**, correspondiente a la **Licenciatura en Ciencia de Datos** de la **Universidad Austral**.
+This project was developed as the final study for the **Numerical Calculus and Simulation** course within the **B.S. in Data Science** program at **Universidad Austral**.
 
-**Equipo de Data Science:**
+**Data Science Team:**
 * Marcos Ziadi
 * Juan Martín Leoni
 * Facundo Rubiolo
 * Máximo Verdondoni
 
-*Agradecimientos especiales al equipo docente (Marcos Prunello y Julián L'Heureux) por la guía académica durante el desarrollo metodológico.*
+*Special thanks to our teaching staff (Marcos Prunello and Julián L'Heureux) for their academic guidance throughout the methodological design.*
