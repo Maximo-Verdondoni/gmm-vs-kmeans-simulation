@@ -5,8 +5,32 @@ from matplotlib.colors import LinearSegmentedColormap
 import seaborn as sns
 import numpy as np
 
+#Librerias para arreglar label switching
+from sklearn.metrics import confusion_matrix
+from scipy.optimize import linear_sum_assignment
+
 # Configuración global para que los gráficos se vean unificados y profesionales
 sns.set_theme(style="whitegrid", palette="muted")
+
+def alinear_etiquetas(y_real, y_pred):
+    """
+    Usa el Algoritmo Húngaro para reasignar los números de los clústeres predichos 
+    de modo que los colores coincidan visualmente con las etiquetas reales.
+    """
+    # 1. Calculamos la matriz de confusión
+    cm = confusion_matrix(y_real, y_pred)
+    
+    # 2. El algoritmo húngaro minimiza costos, así que le pasamos la matriz 
+    # en negativo para que busque MAXIMIZAR las coincidencias.
+    row_ind, col_ind = linear_sum_assignment(-cm)
+    
+    # 3. Armamos un diccionario que dice "La etiqueta predicha X ahora es la etiqueta real Y"
+    mapeo = {col_ind[i]: i for i in range(len(col_ind))}
+    
+    # 4. Reemplazamos los valores en el array original
+    y_pred_alineado = np.vectorize(mapeo.get)(y_pred)
+    
+    return y_pred_alineado
 
 def plot_datos_reales(X, y, titulo="Distribución Real de los Datos"):
     """
@@ -29,7 +53,7 @@ def plot_comparacion_modelos(X, y_km, y_gmm, c_km, c_gmm, titulo="K-Means vs GMM
     
     Parámetros:
     X: Coordenadas de los datos.
-    y_km, y_gmm: Etiquetas predichas por cada modelo.
+    y_km, y_gmm: Etiquetas predichas y alineadas a las etiquetas reales
     c_km, c_gmm: Coordenadas de los centroides/medias ajustados.
     """
     fig, axes = plt.subplots(1, 2, figsize=(16, 6), sharex=True, sharey=True)
@@ -160,7 +184,7 @@ def plot_bootstrap_centroids_bootstrap(X, centroides_km, centroides_gmm, titulo=
             
             # 1. Puntos semi-transparentes de fondo (muy tenues)
             ax.scatter(datos_cluster[:, 0], datos_cluster[:, 1],
-                       c=COLORES[k], s=15, alpha=0.05, edgecolors='none')
+                       c=COLORES[k], s=15, alpha=0.12, edgecolors='none')
             
             # 2. Elipse de confianza del 95% (n_std=2.0)
             plot_elipse_confianza(ax, datos_cluster, color=COLORES[k], n_std=2.0)
@@ -273,7 +297,6 @@ def plot_gmm_3d_mountains(X, gmm, titulo="Densidad 3D y Ejes de Componentes Prin
     pos[:, :, 1] = y
     
     K = gmm.n_components
-    import seaborn as sns
     base_palette = sns.color_palette("deep", K)
     
     max_z = 0 
@@ -304,7 +327,7 @@ def plot_gmm_3d_mountains(X, gmm, titulo="Densidad 3D y Ejes de Componentes Prin
                   (color_rgb[0], color_rgb[1], color_rgb[2], 0.9)]
         cmap_custom = LinearSegmentedColormap.from_list(f'custom_cmap_{k}', colors)
         
-        # OJO: Quitamos el alpha=0.8 de acá para que el colormap haga su trabajo
+        # Quitamos el alpha=0.8 de acá para que el colormap haga su trabajo
         ax.plot_surface(x, y, z_surface, cmap=cmap_custom, linewidth=0, antialiased=True)
         
         # El contorno lo seguimos haciendo con el 'z' original porque no sufre este problema
@@ -313,7 +336,7 @@ def plot_gmm_3d_mountains(X, gmm, titulo="Densidad 3D y Ejes de Componentes Prin
         # =========================================================
         # 4. Proyección en el piso (Z=0) de Mu y Vectores
         # =========================================================
-        ax.scatter(mu[0], mu[1], 0, color=color_rgb, marker='X', s=120, edgecolor='black', zorder=10, linewidth=2)
+        ax.scatter(mu[0], mu[1], 0, color=color_rgb, marker='.', s=120, edgecolor='black', zorder=10, linewidth=2)
         
         autovalores, autovectores = np.linalg.eigh(cov)
         
@@ -363,59 +386,81 @@ def plot_heatmap_varianza_bootstrap(df_stats):
 def plot_intervalos_centroides(df_stats):
     """
     Grafica la evolución de las medias de los centroides y su IC del 95%
-    a lo largo de los escenarios, separando por Coordenada y Clúster.
+    a lo largo de los escenarios, indicando el parámetro poblacional real
+    para visualizar el sesgo (bias).
     """
-    # Configuramos una grilla de 2 filas (X1, X2) x 3 columnas (Clústeres 0, 1, 2)
-    fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(15, 8), sharex=True)
+    #Ordenamos el DF globalmente para evitar desfasajes
+    df_stats = df_stats.sort_values('Escenario').reset_index(drop=True)
+    
+    fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(16, 9), sharex=True)
     coords = ['X1', 'X2']
     modelos = ['K-Means', 'GMM']
     colores = {'K-Means': '#e74c3c', 'GMM': '#3498db'}
 
-    # Obtenemos la lista de escenarios únicos para el eje X
+    # 1. Definimos los parámetros poblacionales (mu reales) directamente en la función
+    mu_reales = {
+        1: {0: [0, 0], 1: [5, 5], 2: [10, 0]},
+        2: {0: [0, 0], 1: [5, 5], 2: [10, 0]},
+        3: {0: [0, 0], 1: [5, 5], 2: [10, 0]},
+        4: {0: [-2, 0], 1: [2, 2], 2: [5, -1]},
+        5: {0: [0, 0], 1: [1, 1], 2: [3, 0]}
+    }
+
     escenarios_unicos = df_stats['Escenario'].unique()
     x_pos = np.arange(len(escenarios_unicos))
+    
+    leyenda_mu_agregada = False # Bandera para no repetir la leyenda de la estrella
 
     for i, coord in enumerate(coords):
         for k in range(3): # Clústeres 0, 1, 2
             ax = axes[i, k]
             
+            # Graficar los estimadores (K-Means y GMM)
             for modelo in modelos:
-                # Filtrar el subset específico
                 mask = (df_stats['Coordenada'] == coord) & (df_stats['Clúster'] == k) & (df_stats['Modelo'] == modelo)
                 subset = df_stats[mask]
                 
                 if subset.empty:
                     continue
                 
-                # Jitter: Desplazamos un poco K-Means a la izq y GMM a la der para que no se superpongan las barras
+                # Jitter: Desplazamos un poco para que no se superpongan
                 desplazamiento = -0.15 if modelo == 'K-Means' else 0.15
                 x_vals = x_pos + desplazamiento
                 
-                # Para plt.errorbar, necesitamos la distancia desde la media hasta los límites
                 yerr_lower = subset['Media'] - subset['IC_95_lower']
                 yerr_upper = subset['IC_95_upper'] - subset['Media']
                 
-                # Graficamos el punto de la media y la barra del IC
+                # Etiqueta para la leyenda global (solo la agregamos en el primer subplot para no duplicar)
+                etiqueta_modelo = modelo if (i == 0 and k == 0) else ""
+                
                 ax.errorbar(x_vals, subset['Media'], yerr=[yerr_lower, yerr_upper], 
-                            fmt='o', color=colores[modelo], label=modelo,
+                            fmt='o', color=colores[modelo], label=etiqueta_modelo,
                             capsize=4, markersize=6, elinewidth=2, alpha=0.8)
-            
-            # Títulos y etiquetas para mantener el gráfico limpio
+
+            #Graficar la estrella del mu real
+            for j, esc in enumerate(escenarios_unicos):
+                # Extraemos el valor real (0 para X1, 1 para X2)
+                coord_idx = 0 if coord == 'X1' else 1
+                val_real = mu_reales[int(esc)][k][coord_idx]
+                
+                etiqueta_real = 'μ Poblacional (Valor Real)' if not leyenda_mu_agregada else ""
+                ax.scatter(j, val_real, color='black', marker='.', s=180, zorder=5, label=etiqueta_real)
+                leyenda_mu_agregada = True # Ya la agregamos una vez, no la repetimos
+
+            # Títulos y estética
             if i == 0:
-                ax.set_title(f'Clúster {k}', fontsize=12, fontweight='bold')
+                ax.set_title(f'Clúster {k}', fontsize=13, fontweight='bold')
             if k == 0:
-                ax.set_ylabel(f'Coordenada {coord}', fontsize=11)
+                ax.set_ylabel(f'Coordenada {coord}', fontsize=12)
             if i == 1:
                 ax.set_xticks(x_pos)
-                ax.set_xticklabels(escenarios_unicos, rotation=45)
-                ax.set_xlabel('Escenario')
-                
+                ax.set_xticklabels([f"Esc. {int(e)}" for e in escenarios_unicos], fontsize=11)
+            
             ax.grid(True, linestyle='--', alpha=0.5)
 
-    # Leyenda única y título general
+    # Configurar una única leyenda global arriba del gráfico
     handles, labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc='lower center', ncol=2, title='Algoritmo', bbox_to_anchor=(0.5, -0.05))
+    fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.05), ncol=3, fontsize=12, frameon=False)
     
-    plt.suptitle('Evolución de los Centroides e Incertidumbre (IC 95%) por Escenario', fontsize=16, y=1.02)
     plt.tight_layout()
     plt.show()
