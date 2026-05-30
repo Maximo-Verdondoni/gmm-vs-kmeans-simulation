@@ -21,15 +21,14 @@ def generar_datos_escenario(escenario_id, N=500, random_state=None):
     y : numpy.ndarray de forma (N,)
         Vector de etiquetas reales (clúster latente de origen).
     """
-    if random_state is not None:
-        np.random.seed(random_state)
+    rng = np.random.default_rng(random_state)
         
     # 1. Definición de la distribución latente
     # Probabilidades a priori (pi) para K=3 clústeres.
     pi = [0.33, 0.33, 0.34]
     
     # Sorteo de la pertenencia de las N observaciones a los clústeres latentes.
-    y = np.random.choice([0, 1, 2], size=N, p=pi)
+    y = rng.choice([0, 1, 2], size=N, p=pi)
     
     # Inicialización de la matriz de características X en el espacio R^2
     X = np.zeros((N, 2))
@@ -89,7 +88,7 @@ def generar_datos_escenario(escenario_id, N=500, random_state=None):
         }
 
     elif escenario_id == 5:
-        # ESCENARIO 4: Geometría Anisotrópica + Superposición Poblacional extrema
+        # ESCENARIO 5: Geometría Anisotrópica + Superposición Poblacional extrema
         # - Medias: Acercadas drásticamente para forzar el solapamiento.
         # - Covarianzas: Las mismas elipses del escenario 3.
         mu = {
@@ -113,10 +112,6 @@ def generar_datos_escenario(escenario_id, N=500, random_state=None):
         mask = (y == k)
         n_k = mask.sum()
         if n_k > 0:
-            X[mask] = np.random.multivariate_normal(
-                mean=mu[k], 
-                cov=cov[k], 
-                size=n_k
-            )
+            X[mask] = rng.multivariate_normal(mean=mu[k], cov=cov[k], size=n_k)
         
     return X, y
