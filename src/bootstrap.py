@@ -24,7 +24,7 @@ def ejecutar_bootstrap(X, B_iteraciones=500):
     centroides_gmm = []
     # Calcular referencia una sola vez
     km_ref = KMeans(n_clusters=3, n_init=10, random_state=0).fit(X)
-    gmm_ref = GaussianMixture(n_components=3, covariance_type='full', random_state=0, reg_covar=1e-4, max_iter=200).fit(X)
+    gmm_ref = GaussianMixture(n_components=3, covariance_type='full', random_state=0, reg_covar=1e-6, max_iter=200).fit(X)
     c_ref_km_raw = km_ref.cluster_centers_
     c_ref_gmm_raw = gmm_ref.means_
 
@@ -41,7 +41,7 @@ def ejecutar_bootstrap(X, B_iteraciones=500):
         
         # 2. Ajustar Modelos
         km = KMeans(n_clusters=3, n_init=10, random_state=b).fit(X_boot)
-        gmm = GaussianMixture(n_components=3, covariance_type='full', random_state=b, reg_covar=1e-4, max_iter=200).fit(X_boot)
+        gmm = GaussianMixture(n_components=3, covariance_type='full', random_state=b, reg_covar=1e-6, max_iter=200).fit(X_boot)
         
         # 3. Extraer centroides crudos
         c_km_raw = km.cluster_centers_
