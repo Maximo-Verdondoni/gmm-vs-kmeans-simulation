@@ -25,8 +25,15 @@ def ejecutar_bootstrap(X, B_iteraciones=500):
     # Calcular referencia una sola vez
     km_ref = KMeans(n_clusters=3, n_init=10, random_state=0).fit(X)
     gmm_ref = GaussianMixture(n_components=3, covariance_type='full', random_state=0, reg_covar=1e-4, max_iter=200).fit(X)
-    c_ref_km = km_ref.cluster_centers_
-    c_ref_gmm = gmm_ref.means_
+    c_ref_km_raw = km_ref.cluster_centers_
+    c_ref_gmm_raw = gmm_ref.means_
+
+    # ---------------------------------------------------------
+    # LA SOLUCIÓN: Alinear las referencias entre sí ordenando por X
+    # De esta forma, el Cluster 0 SIEMPRE es el de la izquierda para ambos.
+    # ---------------------------------------------------------
+    c_ref_km = c_ref_km_raw[c_ref_km_raw[:, 0].argsort()]
+    c_ref_gmm = c_ref_gmm_raw[c_ref_gmm_raw[:, 0].argsort()]
     
     for b in range(B_iteraciones):
         # 1. Remuestreo con reemplazo
