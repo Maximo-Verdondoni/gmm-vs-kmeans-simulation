@@ -379,12 +379,41 @@ def plot_silhouette_comparacion(df_resultados):
     plt.show()
 
 def plot_heatmap_varianza_bootstrap(df_stats):
+    """
+    Genera un panel comparativo (K-Means vs GMM) para la varianza de los centroides,
+    creando un gráfico separado para la coordenada X1 y otro para X2.
+    """
     for coord in ['X1', 'X2']:
-        pivot = (df_stats[df_stats['Coordenada'] == coord]
-                 .pivot_table(index=['Modelo', 'Clúster'], columns='Escenario', values='Varianza'))
-        plt.figure(figsize=(8, 4))
-        sns.heatmap(pivot, annot=True, fmt='.4f', cmap='YlOrRd', linewidths=0.5)
-        plt.title(f'Varianza Bootstrap de Centroides — Coordenada {coord}')
+        # Filtramos los datos solo para la coordenada actual
+        df_coord = df_stats[df_stats['Coordenada'] == coord]
+        
+        # Calculamos el máximo global de varianza de esta coordenada para unificar escalas
+        #vmax_global = df_coord['Varianza'].max()
+        vmax_global = 0.12
+        vmin_global = 0.0 
+        
+        # Creamos el lienzo 1x2 idéntico al del sesgo
+        fig, axes = plt.subplots(1, 2, figsize=(14, 4))
+        
+        for ax, modelo in zip(axes, ['K-Means', 'GMM']):
+            # Pivotamos usando solo el Clúster como índice
+            pivot = (
+                df_coord[df_coord['Modelo'] == modelo]
+                .pivot_table(index='Clúster', columns='Escenario', values='Varianza')
+            )
+            
+            sns.heatmap(
+                pivot, annot=True, fmt='.4f', cmap='YlOrRd',
+                ax=ax, linewidths=0.5,
+                vmin=vmin_global,  # Escala unificada
+                vmax=vmax_global,  # Escala unificada
+                cbar_kws={'label': f'Varianza ({coord})'}
+            )
+            
+            ax.set_title(f'Varianza Bootstrap Coordenada {coord} — {modelo}', fontsize=12, fontweight='bold')
+            ax.set_xlabel('Escenario')
+            ax.set_ylabel('Clúster')
+            
         plt.tight_layout()
         plt.show()
 
