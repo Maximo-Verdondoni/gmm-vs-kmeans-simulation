@@ -74,27 +74,16 @@ def plot_comparacion_modelos(X, y_km, y_gmm, c_km, c_gmm, titulo="K-Means vs GMM
     plt.tight_layout()
     plt.show()
 
-def plot_montecarlo_violin(df_resultados):
+def plot_montecarlo_boxplot(df_resultados):
     """
     Grafica la distribución del ARI comparando ambos modelos por escenario.
-    Utiliza un violin plot dividido para mostrar la densidad real y los cuartiles de 
-    las simulaciones Montecarlo.
     """
     plt.figure(figsize=(10, 6))
     
     # Violinplot con split=True funde ambas distribuciones en una sola figura simétrica por escenario
-    sns.violinplot(
-        data=df_resultados, 
-        x='Escenario', 
-        y='ARI', 
-        hue='Modelo',
-        gap=0.1,
-        dodge=True, 
-        inner='quart',     # Dibuja las líneas de los cuartiles dentro del violín
-        palette=['#e74c3c', '#3498db']
-    )
+    sns.boxplot(data=df_resultados, x='Escenario', y='ARI', hue='Modelo', palette=['#e74c3c', '#3498db'])
     
-    plt.title('Distribución de Calidad de Partición (ARI) mediante Simulación Montecarlo', fontsize=14, pad=15)
+    plt.title('Boxplot de Calidad de Partición (ARI) mediante Simulación Montecarlo', fontsize=14, pad=15)
     plt.ylabel('Adjusted Rand Index (ARI)')
     plt.xlabel('Escenario (Aumento de Complejidad Geométrica)')
     plt.ylim(-0.1, 1.1)
