@@ -1,106 +1,93 @@
-# GMM vs. K-Means: Estudio por Simulación
+# 🚀 GMM vs. K-Means: When Geometry Breaks Algorithms
 
-**Trabajo Práctico Grupal — Cálculo Numérico y Simulación**  
-Lic. en Ciencia de Datos · Universidad Austral
+![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
+![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-Machine_Learning-orange.svg)
+![Simulation](https://img.shields.io/badge/Simulation-Monte_Carlo_%7C_Bootstrap-success.svg)
 
----
+K-Means is the most widely used clustering algorithm in the industry due to its speed and simplicity, but it has a structural Achilles' heel: **it assumes the world is made of perfect, symmetric spheres**. 
 
-## Integrantes
-
-| Nombre |
-|--------|
-| Marcos Ziadi |
-| Juan Martín Leoni |
-| Facundo Rubiolo |
-| Máximo Verdondoni |
+What happens when real-world data presents elliptical clusters, unequal densities, or severe overlap? In this project, we empirically demonstrate why rigid boundary algorithms (Hard Clustering) collapse in the face of spatial complexity, and how **Gaussian Mixture Models (GMM)** manage to decode the latent structure through probabilistic assignment (Soft Clustering).
 
 ---
 
-## Descripción
+## 🧠 Project Highlights
 
-Este proyecto lleva adelante un estudio por simulación completo para responder la siguiente pregunta de investigación:
+This repository is not just a model comparison; it is a complete statistical experimentation environment. It includes:
 
-> ¿Cómo se degradan la precisión de partición geométrica y la estabilidad paramétrica de los centroides estimados por **K-Means** en comparación con un **Modelo de Mezclas Gaussianas (GMM)** cuando se violan de forma progresiva y controlada los supuestos de esfericidad, homogeneidad de varianza e independencia en los clústeres reales?
+- ⚙️ **Data Generating Mechanism (DGM):** A Gaussian mixture simulation engine in $\mathbb{R}^2$ to create controlled geometric "stress tests."
+- 🎲 **Monte Carlo Simulation:** Execution of hundreds of replicas to evaluate the expected value of extrinsic metrics (ARI, Homogeneity, Completeness).
+- 🔄 **Label Switching Resolution:** Implementation of the *Hungarian Algorithm* (linear sum assignment) to solve the random permutation of labels during parametric instability analysis.
+- 📊 **Advanced Visualizations:** 3D rendering of Probability Density Functions (PDF) with eigenvector projection, fuzzy boundary mapping (alpha mapping), and parametric confidence ellipses.
 
 ---
 
-## Estructura del Repositorio
+## 📂 Repository Architecture
 
-```
+The source code is structured following MLOps best practices, cleanly separating mathematical logic from visualization and analysis.
+
+~~~text
 .
-├── Estudio.ipynb          # Notebook principal con metodología, experimentos y análisis
-├── README.md
-└── (scripts auxiliares .py si aplica)
-```
+├── notebooks/              # Notebooks
+│   ├── Estudio.ipynb       # Main notebook featuring narrative, analysis, and conclusions
+├── src/                    # Reusable Python modules
+│   ├── data_generation.py  # DGM logic and spatial perturbation
+│   ├── simulation.py       # Monte Carlo pipeline and metrics collection
+│   ├── bootstrap.py        # Non-parametric resampling and centroid anchoring
+│   └── utils.py            # Visual toolkit (Seaborn / Matplotlib 3D)
+├── requirements.txt
+└── README.md
+~~~
 
 ---
 
-## Metodología
+## 🧪 Stress Tests: The 5 Scenarios
 
-El estudio recorre las etapas canónicas de una simulación:
+The latent space was progressively deformed to evaluate the breaking point of both algorithms:
 
-1. **Formulación del problema** — Pregunta de investigación, objetivos e hipótesis previas.
-2. **Modelización conceptual** — Factores fijos y variables, supuestos de cada algoritmo.
-3. **Mecanismo Generador de Datos (MGD)** — Mixtura de gaussianas multivariadas en $\mathbb{R}^2$ con $N = 500$ observaciones y $K = 3$ clústeres equiprobables.
-4. **Diseño de escenarios** — Cuatro configuraciones que violan progresivamente los supuestos de K-Means.
-5. **Implementación y registro de métricas** — Dos flujos de evaluación independientes.
-6. **Experimentación** — Ejecución de los experimentos con suficientes réplicas para resultados estables.
-7. **Análisis de resultados y conclusiones** — Tablas, boxplots y scatter plots de centroides.
-
----
-
-## Escenarios
-
-| # | Nombre | Descripción |
-|---|--------|-------------|
-| 1 | **Control** | Clústeres esféricos, varianza homogénea, bien separados |
-| 2 | **Heterocedasticidad** | Varianzas fuertemente desiguales entre clústeres ($\sigma^2 \in \{0.5, 2.0, 5.0\}$) |
-| 3 | **Anisotropía** | Covarianzas no nulas: clústeres elípticos con distintas orientaciones |
-| 4 | **Anisotropía + Superposición** | Estructura elíptica del Escenario 3 con centroides más cercanos |
+| # | Scenario | Geometry | The Algorithmic Challenge |
+|---|----------|----------|---------------------------|
+| 1 | **Control** | Perfect, separated spheres | Baseline. A technical tie is expected. |
+| 2 | **Heteroscedasticity** | Strongly unequal variances | K-Means is prone to "stealing" points from highly dispersed clusters. |
+| 3 | **Anisotropy** | Ellipses with varied orientations | K-Means splits ellipses in half. GMM adjusts full covariance matrices. |
+| 4 | **Overlap** | Close, intersecting ellipses | Acid test to evaluate uncertainty across decision boundaries. |
+| 5 | **Total Collapse** | Pure noise and extreme overlap | Evaluation of *Overfitting* and parametric variance. |
 
 ---
 
-## Algoritmos Evaluados
+## 📈 Key Findings (Bias-Variance Trade-off)
 
-- **K-Means** (`KMeans(n_clusters=3)`) — asignación dura, fronteras de Voronoi, asume esfericidad e igual varianza.
-- **GMM** (`GaussianMixture(n_components=3, covariance_type='full')`) — asignación probabilística, estima covarianza completa por componente.
-
----
-
-## Métricas
-
-### Flujo A — Simulación de Montecarlo ($M = 200$ réplicas por escenario)
-- **Adjusted Rand Index (ARI)**: mide la coincidencia entre etiquetas predichas y reales, corregida por azar (rango $[-1, 1]$; 1 = partición perfecta).
-
-### Flujo B — Bootstrap no paramétrico ($B = 500$ iteraciones por escenario)
-- **Coordenadas de centroides estimados** $(X_1, X_2)$: permiten cuantificar la varianza e intervalos de confianza empíricos de la localización de cada centroide.
+1. **The K-Means Bias:** Faced with anisotropy (Scenario 3), K-Means exhibits a high geometric bias, shifting its centroids far from the true population parameter ($\mu$) by forcing Voronoi cells where they do not belong.
+2. **GMM's Robustness:** GMM remains unbiased against unequal variances and covariances, achieving vastly superior partition quality (ARI).
+3. **The Complexity Trap:** In pure noise scenarios (Scenario 5), GMM's flexibility works against it (high parametric variance). It overfits the noise in every Bootstrap iteration, whereas K-Means maintains erroneous but stable estimations.
 
 ---
 
-## Hipótesis
+## ⚙️ Reproduction Guide
 
-Se postula que bajo el **Escenario 1 (Control)** ambos algoritmos exhibirán rendimiento equivalente. A medida que se introduce heterocedasticidad y anisotropía, **K-Means** sufrirá una degradación severa en ARI y alta varianza en la ubicación de sus centroides (Bootstrap), mientras que **GMM** mantendrá robustez paramétrica por su capacidad de modelar covarianzas completas.
+To run the simulations and generate the 3D graphics locally, the following dependencies are required:
 
----
+~~~bash
+# Clone the repository
+git clone https://github.com/tu-usuario/gmm-vs-kmeans-simulation.git
+cd gmm-vs-kmeans-simulation
 
-## Requisitos
+# Install dependencies
+pip install -r requirements.txt
 
-```bash
-pip install numpy pandas scikit-learn matplotlib seaborn jupyter
-```
-
----
-
-## Ejecución
-
-```bash
+# Launch the interactive environment
 jupyter notebook Estudio.ipynb
-```
+~~~
 
 ---
 
-## Materia y Docentes
+## 👥 About the Authors
 
-**Cálculo Numérico y Simulación**  
-Docentes: Marcos Prunello · Julián L'Heureux  
-Licenciatura en Ciencia de Datos — Universidad Austral
+This project was developed as the final study for the **Numerical Calculus and Simulation** course within the **B.S. in Data Science** program at **Universidad Austral**.
+
+**Data Science Team:**
+* Marcos Ziadi
+* Juan Martín Leoni
+* Facundo Rubiolo
+* Máximo Verdondoni
+
+*Special thanks to our teaching staff (Marcos Prunello and Julián L'Heureux) for their academic guidance throughout the methodological design.*
