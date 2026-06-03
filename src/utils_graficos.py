@@ -80,7 +80,6 @@ def plot_montecarlo_boxplot(df_resultados):
     """
     plt.figure(figsize=(10, 6))
     
-    # Violinplot con split=True funde ambas distribuciones en una sola figura simétrica por escenario
     sns.boxplot(data=df_resultados, x='Escenario', y='ARI', hue='Modelo', palette=['#e74c3c', '#3498db'])
     
     plt.title('Boxplot de Calidad de Partición (ARI) mediante Simulación Montecarlo', fontsize=14, pad=15)
@@ -366,9 +365,15 @@ def plot_gmm_3d_mountains(X, gmm, titulo="Densidad 3D y Ejes de Componentes Prin
 
 def plot_silhouette_comparacion(df_resultados):
     plt.figure(figsize=(10, 6))
-    sns.violinplot(
-        data=df_resultados, x='Escenario', y='Silhouette', hue='Modelo',
-        gap=0.1, dodge=True , inner='quart', palette=['#e74c3c', '#3498db']
+    sns.boxplot(
+        data=df_resultados, 
+        x='Escenario', 
+        y='Silhouette', 
+        hue='Modelo',
+        palette={'K-Means': '#e74c3c', 'GMM': '#3498db'}, # Asignación explícita de colores
+        width=0.6,          # Grosor de las cajas
+        fliersize=3,        # Tamaño de los puntos atípicos (outliers)
+        linewidth=1.5       # Grosor de las líneas del boxplot
     )
     plt.title('Silhouette Score por Escenario y Modelo', fontsize=14, pad=15)
     plt.ylabel('Silhouette Score')
