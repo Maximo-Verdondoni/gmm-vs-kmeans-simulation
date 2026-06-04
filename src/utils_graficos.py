@@ -12,7 +12,7 @@ from scipy.optimize import linear_sum_assignment
 # Configuración global para que los gráficos se vean unificados y profesionales
 sns.set_theme(style="whitegrid", palette="muted")
 
-def alinear_etiquetas(y_real, y_pred):
+def alinear_etiquetas(y_real, y_pred, return_mapeo=False):
     """
     Usa el Algoritmo Húngaro para reasignar los números de los clústeres predichos 
     de modo que los colores coincidan visualmente con las etiquetas reales.
@@ -30,6 +30,10 @@ def alinear_etiquetas(y_real, y_pred):
     # 4. Reemplazamos los valores en el array original
     y_pred_alineado = np.vectorize(mapeo.get)(y_pred)
     
+    # 5. NUEVO: Devolvemos el diccionario si el parámetro es True
+    if return_mapeo:
+        return y_pred_alineado, mapeo
+        
     return y_pred_alineado
 
 def plot_datos_reales(X, y, titulo="Distribución Real de los Datos"):
@@ -58,14 +62,28 @@ def plot_comparacion_modelos(X, y_km, y_gmm, c_km, c_gmm, titulo="K-Means vs GMM
     """
     fig, axes = plt.subplots(1, 2, figsize=(16, 6), sharex=True, sharey=True)
     
+    # ==========================================
+    # Paleta estricta "deep"
+    # ==========================================
+    base_palette = sns.color_palette("deep", 3)
+    palette_dict = {0: base_palette[0], 1: base_palette[1], 2: base_palette[2]}
+    
     # Panel 1: K-Means
-    sns.scatterplot(x=X[:, 0], y=X[:, 1], hue=y_km, palette="Set1", ax=axes[0], s=40, alpha=0.6, legend=False)
+    sns.scatterplot(
+        x=X[:, 0], y=X[:, 1], hue=y_km, 
+        palette=palette_dict,  # <-- Usamos el diccionario
+        ax=axes[0], s=40, alpha=0.6, legend=False
+    )
     axes[0].scatter(c_km[:, 0], c_km[:, 1], c='black', marker='X', s=200, label='Centroides')
     axes[0].set_title("Predicción K-Means (Hard Clustering)", fontsize=13)
     axes[0].legend()
 
     # Panel 2: GMM
-    sns.scatterplot(x=X[:, 0], y=X[:, 1], hue=y_gmm, palette="Set1", ax=axes[1], s=40, alpha=0.6, legend=False)
+    sns.scatterplot(
+        x=X[:, 0], y=X[:, 1], hue=y_gmm, 
+        palette=palette_dict,  # <-- Usamos el diccionario
+        ax=axes[1], s=40, alpha=0.6, legend=False
+    )
     axes[1].scatter(c_gmm[:, 0], c_gmm[:, 1], c='black', marker='X', s=200, label='Medias')
     axes[1].set_title("Predicción GMM (Soft Clustering)", fontsize=13)
     axes[1].legend()
@@ -203,7 +221,7 @@ def plot_bootstrap_centroids_bootstrap(X, centroides_km, centroides_gmm, escenar
     plt.tight_layout()
     plt.show()
 
-def plot_gmm_background_certainty(X, y_real, gmm, titulo="Regiones de Decisión y Certeza de Fondo en GMM"):
+def plot_gmm_background_certainty(X, y_real, gmm,mapeo, titulo="Regiones de Decisión y Certeza de Fondo en GMM"):
     """
     Grafica los puntos reales de forma sólida y colorea el fondo del gráfico 
     según el clúster dominante en cada región espacial, disipando el color 
@@ -222,71 +240,67 @@ def plot_gmm_background_certainty(X, y_real, gmm, titulo="Regiones de Decisión 
     """
     plt.figure(figsize=(10, 8))
     
-    # 1. Definir los límites del gráfico basados en tus datos reales
     x_min, x_max = X[:, 0].min() - 1.5, X[:, 0].max() + 1.5
     y_min, y_max = X[:, 1].min() - 1.5, X[:, 1].max() + 1.5
     
-    # 2. Crear la malla (Meshgrid) para evaluar el espacio de fondo
-    # 300x300 puntos es un excelente balance entre resolución visual y velocidad computacional
     xx, yy = np.meshgrid(np.linspace(x_min, x_max, 300),
                          np.linspace(y_min, y_max, 300))
-    
-    # Aplanar la malla para pasársela al GMM como un vector de coordenadas (N_malla, 2)
     grid_points = np.c_[xx.ravel(), yy.ravel()]
     
-    # 3. Obtener las probabilidades blandas de la grilla de fondo
     grid_probs = gmm.predict_proba(grid_points)
-    grid_pred = np.argmax(grid_probs, axis=1) # Clúster ganador en cada pixel
-    grid_certeza = np.max(grid_probs, axis=1) # Nivel de certeza [0.33 a 1.0]
+    grid_pred_gmm = np.argmax(grid_probs, axis=1) 
+    grid_certeza = np.max(grid_probs, axis=1) 
     
-    # 4. Normalizar la certeza de fondo para el canal Alpha
+    # ==========================================
+    # CORRECCIÓN: Mapear el fondo a los colores reales
+    # ==========================================
+    grid_pred_real = np.vectorize(mapeo.get)(grid_pred_gmm)
+    
     K = gmm.n_components
     prob_min = 1.0 / K
     alpha_background = (grid_certeza - prob_min) / (1.0 - prob_min)
-    alpha_background = np.clip(alpha_background, 0.0, 1.0) # Forzar rango estricto [0, 1]
+    alpha_background = np.clip(alpha_background, 0.0, 1.0) 
     
-    # 5. Mapear colores de fondo (Matriz RGBA de píxeles)
-    unique_labels = np.arange(K)
     base_palette = sns.color_palette("deep", K)
-    
     rgba_background = np.zeros((grid_points.shape[0], 4))
-    for i, label in enumerate(grid_pred):
-        rgba_background[i, :3] = base_palette[label]     # Color del clúster dominante
-        rgba_background[i, 3] = alpha_background[i] * 0.4 # Multiplicamos por 0.4 para que sea un fondo sutil y no tape los puntos
+    
+    for i, label in enumerate(grid_pred_real):
+        rgba_background[i, :3] = base_palette[label]     
+        rgba_background[i, 3] = alpha_background[i] * 0.4 
         
-    # Reestructurar la matriz plana RGBA a las dimensiones de la imagen (300, 300, 4)
     rgba_image = rgba_background.reshape(xx.shape + (4,))
     
-    # 6. Pintar el fondo usando imshow
     plt.imshow(rgba_image, extent=(x_min, x_max, y_min, y_max), origin='lower', aspect='auto')
     
-    # 7. Graficar los puntos reales ARRIBA del fondo (completamente sólidos y delineados)
-    # Usamos la misma paleta para mantener la correlación
+    # Graficamos los puntos usando el color original (y_real)
+    palette_dict = {k: base_palette[k] for k in range(K)}
+    
+    # Graficamos los puntos usando el color original estricto
     sns.scatterplot(
         x=X[:, 0], y=X[:, 1], hue=y_real, 
-        palette="deep", s=55, alpha=1.0, edgecolor="black", linewidth=0.8
+        palette=palette_dict,  # <--- Pasamos el diccionario acá
+        s=55, alpha=1.0, edgecolor="black", linewidth=0.8
     )
     
-    # 8. Estética final y Leyendas
     plt.title(titulo, fontsize=14, pad=15, fontweight='bold')
     plt.xlabel("X1")
     plt.ylabel("X2")
     plt.xlim(x_min, x_max)
     plt.ylim(y_min, y_max)
     
-    # Leyenda manual para evitar duplicados feos en matplotlib
+    # Leyenda estática con los colores originales
     legend_elements = [Patch(facecolor=base_palette[k], edgecolor='k', label=f'Clúster {k}') 
-                       for k in unique_labels]
+                       for k in range(K)]
     plt.legend(handles=legend_elements, title="Regiones de Clúster", loc="upper right")
     
     plt.tight_layout()
     plt.show()
 
-def plot_gmm_3d_mountains(X, gmm, titulo="Densidad 3D y Ejes de Componentes Principales"):
+def plot_gmm_3d_mountains(X, gmm, mapeo, titulo="Densidad 3D y Ejes de Componentes Principales"):
     """
     Grafica la Función de Densidad de Probabilidad (PDF) de cada clúster 
     como una superficie 3D, y proyecta en la base (Z=0) las medias (mu) 
-    junto con los vectores de varianza.
+    junto con los vectores de varianza, respetando los colores originales.
     """
     fig = plt.figure(figsize=(12, 9))
     ax = fig.add_subplot(111, projection='3d')
@@ -322,11 +336,13 @@ def plot_gmm_3d_mountains(X, gmm, titulo="Densidad 3D y Ejes de Componentes Prin
         # 3. LA SOLUCIÓN AL PLANO VERDE (Máscara NaN)
         # =========================================================
         z_surface = z.copy()
-        # Todo valor que sea "piso" (densidad casi nula) lo volvemos NaN 
-        # para que el motor 3D de Matplotlib sea incapaz de dibujarlo.
         z_surface[z_surface < 1e-4] = np.nan 
         
-        color_rgb = base_palette[k]
+        # =========================================================
+        # Asignamos el color mapeado
+        # =========================================================
+        color_rgb = base_palette[mapeo[k]]
+        
         colors = [(color_rgb[0], color_rgb[1], color_rgb[2], 0.2), # Un poco más transparente en la base
                   (color_rgb[0], color_rgb[1], color_rgb[2], 0.9)]
         cmap_custom = LinearSegmentedColormap.from_list(f'custom_cmap_{k}', colors)
