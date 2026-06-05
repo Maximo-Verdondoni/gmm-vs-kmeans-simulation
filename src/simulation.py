@@ -7,7 +7,7 @@ from sklearn.metrics import silhouette_score
 
 def ejecutar_montecarlo(M_replicas=200):
     """
-    Ejecuta M réplicas de Montecarlo sobre los 5 escenarios y calcula el ARI.
+    Ejecuta M réplicas de Montecarlo sobre los 5 escenarios y calcula el ARI y Silohuette.
     """
     resultados = []
     

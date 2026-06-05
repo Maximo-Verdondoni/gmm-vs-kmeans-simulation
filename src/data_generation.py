@@ -109,9 +109,24 @@ def generar_datos_escenario(escenario_id, N=500, random_state=None):
     # Muestreamos iterativamente de la distribución Gaussiana multivariada 
     # correspondiente al clúster asignado previamente.
     for k in range(3):
+        # 'mask' crea un arreglo booleano (Verdadero/Falso).
+        # Será True solo en las posiciones donde la etiqueta generada en el paso 1 sea igual al clúster actual 'k'.
         mask = (y == k)
+
+        # Sumamos los valores True de la máscara para saber exactamente cuántos puntos 
+        # (de los N totales) cayeron en este clúster específico.
         n_k = mask.sum()
+
+        # Verificamos que haya al menos un punto asignado a este clúster 
+        # (por azar, un clúster podría quedar vacío si N es muy bajo, aunque con N=500 es improbable).
         if n_k > 0:
+            # Generamos los datos espaciales:
+            # rng.multivariate_normal crea 'n_k' puntos en 2D usando la media (mu[k]) 
+            # y la matriz de covarianza (cov[k]) correspondientes al escenario elegido.
+            # X[mask] asigna estos puntos recién creados exactamente en las filas de la matriz X 
+            # que le corresponden a este clúster.
             X[mask] = rng.multivariate_normal(mean=mu[k], cov=cov[k], size=n_k)
-        
+
+    # Devolvemos 'X' (la matriz con las coordenadas espaciales listas para el algoritmo) 
+    # e 'y' (las respuestas correctas o  para evaluar el rendimiento después).    
     return X, y
